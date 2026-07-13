@@ -125,7 +125,11 @@ export function connectLiveStream(eventHandlers = {}) {
     appState.liveStream = null
   }
 
-  appState.liveStream = new EventSource(`${window.__XO_BACKEND_URL__ || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`)}/api/live/stream?username=${encodeURIComponent(getCurrentUsername())}`)
+  const liveBackendUrl = window.__XO_BACKEND_URL__ || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://xo-backend-lzj0.onrender.com')
+
+  appState.liveStream = new EventSource(`${liveBackendUrl}/api/live/stream?username=${encodeURIComponent(getCurrentUsername())}`)
 
   appState.liveStream.addEventListener('challenge_received', (event) => {
     const payload = JSON.parse(event.data || '{}')

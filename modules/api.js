@@ -1,6 +1,6 @@
-const fallbackBackendUrl = window.location.hostname === 'localhost'
+const fallbackBackendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:5000'
-  : `http://${window.location.hostname}:5000`
+  : 'https://xo-backend-lzj0.onrender.com'
 
 export const API_URL = (window.__XO_BACKEND_URL__ || fallbackBackendUrl).replace(/\/$/, '')
 

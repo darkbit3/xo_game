@@ -1,4 +1,8 @@
-var API_URL = (window.__XO_BACKEND_URL__ || 'http://localhost:5000').replace(/\/$/, '')
+const DEFAULT_BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'
+  : 'https://xo-backend-lzj0.onrender.com'
+
+var API_URL = (window.__XO_BACKEND_URL__ || DEFAULT_BACKEND_URL).replace(/\/$/, '')
 
 function parseAuthQuery() {
   const params = new URLSearchParams(window.location.search)
