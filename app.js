@@ -99,6 +99,56 @@ function getCurrentUsername() {
   return formatUsername(getCurrentUserProfile().username)
 }
 
+function showLoadingOverlay(message = 'Loading…') {
+  if (!loadingOverlay) return
+  if (loadingOverlayText) loadingOverlayText.textContent = message
+  loadingOverlay.classList.remove('hidden')
+}
+
+function hideLoadingOverlay() {
+  if (!loadingOverlay) return
+  loadingOverlay.classList.add('hidden')
+}
+
+function showConnectionBanner(message = 'You are offline. Please reconnect and retry.') {
+  if (!connectionBanner) return
+  if (connectionBannerText) connectionBannerText.textContent = message
+  connectionBanner.classList.remove('hidden')
+}
+
+function hideConnectionBanner() {
+  if (!connectionBanner) return
+  connectionBanner.classList.add('hidden')
+}
+
+function updateConnectionStatus() {
+  if (navigator.onLine) {
+    hideConnectionBanner()
+    return
+  }
+  showConnectionBanner('You are offline. Please reconnect and retry.')
+}
+
+async function attemptReconnect() {
+  showLoadingOverlay('Retrying connection…')
+  try {
+    const response = await fetch(`${API_URL}/api/status`, { cache: 'no-store' })
+    if (response.ok) {
+      hideConnectionBanner()
+      await loadPlayers()
+      await loadLiveChallenges()
+      connectLiveStream()
+      return
+    }
+    showConnectionBanner('Retry failed. Still offline or unreachable.')
+  } catch (error) {
+    console.warn('Reconnect failed', error)
+    showConnectionBanner('Retry failed. Still offline or unreachable.')
+  } finally {
+    hideLoadingOverlay()
+  }
+}
+
 // Register the current user as online in the DB.
 // Called once on every app load — creates the row if new, updates status+balance if returning.
 async function registerOnline() {
@@ -243,10 +293,15 @@ async function saveSelectedBet(amount) {
   }
 }
 
-const betSelectedTag  = document.getElementById('betSelectedTag');
-const playerList      = document.getElementById('playerList');
-const selectedBanner  = document.getElementById('selectedBanner');
-const sbAvatar        = document.getElementById('sbAvatar');
+const betSelectedTag       = document.getElementById('betSelectedTag');
+const playerList           = document.getElementById('playerList');
+const loadingOverlay       = document.getElementById('loadingOverlay');
+const loadingOverlayText   = document.getElementById('loadingOverlayText');
+const connectionBanner     = document.getElementById('connectionBanner');
+const connectionBannerText = document.getElementById('connectionBannerText');
+const connectionRetryButton = document.getElementById('connectionRetryButton');
+const selectedBanner       = document.getElementById('selectedBanner');
+const sbAvatar             = document.getElementById('sbAvatar');
 const sbUsername      = document.getElementById('sbUsername');
 const sbStatusTxt     = document.getElementById('sbStatusTxt');
 const sbBetTag        = document.getElementById('sbBetTag');
@@ -348,6 +403,11 @@ async function loadPlayers() {
     onlinePlayers = [];
     renderPlayers();
     updateOnlineCount();
+    if (!navigator.onLine) {
+      updateConnectionStatus();
+    } else {
+      showConnectionBanner('Unable to load players. Retry?')
+    }
   }
 }
 
@@ -1307,14 +1367,23 @@ function setupTelegram() {
   if (window.Telegram?.WebApp) window.Telegram.WebApp.expand();
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   setupTelegram();
   loadStats();
   renderSidebarStats();
   updateBetDisplay();
   if (window.authData) applyAuthData(window.authData);
-  loadPlayers();
-  loadLiveChallenges();
+  updateConnectionStatus();
+  connectionRetryButton?.addEventListener('click', attemptReconnect);
+  window.addEventListener('online', () => {
+    hideConnectionBanner();
+    attemptReconnect();
+  });
+  window.addEventListener('offline', updateConnectionStatus);
+  showLoadingOverlay('Loading app…');
+  await loadPlayers();
+  await loadLiveChallenges();
+  hideLoadingOverlay();
   // Restore active match view after a reload if present
   try {
     const stored = localStorage.getItem('xo_activeMatchId');

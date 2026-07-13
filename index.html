@@ -19,6 +19,13 @@
     </div>
   </div>
 
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p class="loading-text" id="loadingOverlayText">Loading app…</p>
+    </div>
+  </div>
+
   <div id="appWrapper">
   <!-- ══════════════════════════════════════════
        PAGE WRAPPER  (topbar + two-column layout)
@@ -99,7 +106,10 @@
             </div>
 
             <div class="player-list" id="playerList"></div>
-          </div>
+      <div class="connection-banner hidden" id="connectionBanner">
+        <span id="connectionBannerText">You are offline.</span>
+        <button class="retry-button" id="connectionRetryButton" type="button">Retry</button>
+      </div>
 
         </div><!-- /dashboardScreen -->
 
