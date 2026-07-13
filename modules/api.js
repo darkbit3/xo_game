@@ -71,6 +71,28 @@ export function acceptLiveChallenge(id) {
   })
 }
 
+export function declineLiveChallenge(id) {
+  return fetchJson(`${API_URL}/api/live/challenges/${id}/decline`, {
+    method: 'POST',
+  })
+}
+
+export function submitMatchMove(matchId, payload) {
+  return fetchJson(`${API_URL}/api/live/matches/${matchId}/move`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function setPlayerOffline(payload) {
+  return fetchJson(`${API_URL}/api/players/offline`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
 export function forfeitMatch(matchId, payload) {
   return fetchJson(`${API_URL}/api/live/matches/${matchId}/forfeit`, {
     method: 'POST',

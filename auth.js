@@ -50,21 +50,71 @@ function getStoredAuth(data = {}) {
 }
 
 function showNotAllowedScreen() {
-  document.getElementById('authScreen').classList.remove('hidden')
-  document.getElementById('appWrapper').classList.add('hidden')
+  const authScreen = document.getElementById('authScreen')
+  const appWrapper = document.getElementById('appWrapper')
+  if (authScreen) authScreen.classList.remove('hidden')
+  if (appWrapper) appWrapper.classList.add('hidden')
+  showUnauthorizedPopup()
 }
 
 function showAppScreen() {
-  document.getElementById('authScreen').classList.add('hidden')
-  document.getElementById('appWrapper').classList.remove('hidden')
+  const authScreen = document.getElementById('authScreen')
+  const appWrapper = document.getElementById('appWrapper')
+  if (authScreen) authScreen.classList.add('hidden')
+  if (appWrapper) appWrapper.classList.remove('hidden')
+}
+
+function showUnauthorizedPopup() {
+  if (document.getElementById('unauthorizedPopup')) return
+  const overlay = document.createElement('div')
+  overlay.id = 'unauthorizedPopup'
+  overlay.style.cssText = [
+    'position:fixed',
+    'inset:0',
+    'z-index:10000',
+    'display:grid',
+    'place-items:center',
+    'background:rgba(10,14,26,0.96)',
+    'padding:24px'
+  ].join(';')
+
+  overlay.innerHTML = `
+    <div style="max-width:480px;width:100%;background:#0f172a;color:#f8fafc;padding:32px;border-radius:28px;box-shadow:0 32px 80px rgba(0,0,0,0.35);text-align:center;font-family:Inter,system-ui,sans-serif;">
+      <div style="font-size:2rem;font-weight:800;margin-bottom:16px;">Unauthorized</div>
+      <p style="margin:0 0 24px;color:#cbd5e1;line-height:1.6;">This app requires a valid token, username, phone number, and balance to continue. Please authenticate or open the app with valid credentials.</p>
+      <button id="unauthRetryBtn" style="padding:12px 20px;border-radius:14px;background:#2563eb;color:#fff;border:none;font-size:1rem;cursor:pointer;">Retry</button>
+    </div>
+  `
+
+  document.body.appendChild(overlay)
+  document.body.style.overflow = 'hidden'
+  const retryBtn = document.getElementById('unauthRetryBtn')
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      overlay.remove()
+      document.body.style.overflow = ''
+      window.location.reload()
+    })
+  }
 }
 
 function authSuccess(data) {
   setAuthData(data)
   showAppScreen()
-  if (typeof window.appReady === 'function') {
-    window.appReady()
+
+  function callAppReady() {
+    if (typeof window.appReady === 'function') {
+      window.appReady()
+      return
+    }
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', callAppReady, { once: true })
+    } else {
+      window.requestAnimationFrame(callAppReady)
+    }
   }
+
+  callAppReady()
 }
 
 async function resolveAuthFromBackend(data) {
@@ -125,6 +175,10 @@ function handleAuthNavigation() {
   initAuth()
 }
 
-window.addEventListener('DOMContentLoaded', handleAuthNavigation)
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', handleAuthNavigation)
+} else {
+  handleAuthNavigation()
+}
 window.addEventListener('popstate', handleAuthNavigation)
 window.addEventListener('pageshow', handleAuthNavigation)

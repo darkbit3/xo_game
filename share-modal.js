@@ -23,9 +23,8 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initShare, { once: true });
-  } else {
-    initShare();
+  document.addEventListener('DOMContentLoaded', initShare, false)
+  if (document.readyState !== 'loading') {
+    initShare()
   }
 })();

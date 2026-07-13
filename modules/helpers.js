@@ -41,3 +41,23 @@ export function getCurrentUserProfile() {
 export function getCurrentUsername() {
   return formatUsername(getCurrentUserProfile().username)
 }
+
+export function parseMatchMoves(match) {
+  if (!match) return []
+  try {
+    return typeof match.moves === 'string' && match.moves
+      ? JSON.parse(match.moves)
+      : (match.moves || [])
+  } catch (error) {
+    console.error('[parseMatchMoves] could not parse moves:', error, 'match:', match)
+    return []
+  }
+}
+
+export function getOpponentNameFromMatch(match) {
+  if (!match) return 'Opponent'
+  const currentUser = normalizeUsername(getCurrentUsername())
+  return normalizeUsername(match.player_x_username) === currentUser
+    ? match.player_o_username
+    : match.player_x_username
+}

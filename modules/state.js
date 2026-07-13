@@ -37,3 +37,16 @@ export const gameState = {
     this.moveInProgress = false
   },
 }
+
+export function setActiveMatchId(id) {
+  appState.activeMatchId = id == null ? null : Number(id)
+  try {
+    if (appState.activeMatchId) localStorage.setItem('xo_activeMatchId', String(appState.activeMatchId))
+    else localStorage.removeItem('xo_activeMatchId')
+  } catch (e) {}
+}
+
+export function clearActiveMatchId() {
+  appState.activeMatchId = null
+  try { localStorage.removeItem('xo_activeMatchId') } catch (e) {}
+}
