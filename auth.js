@@ -8,22 +8,18 @@ function parseAuthQuery() {
   const params = new URLSearchParams(window.location.search)
   return {
     token: params.get('token') || '',
-    phoneNumber: params.get('phoneNumber') || params.get('phone_number') || params.get('phone') || '',
-    username: params.get('username') || '',
-    balance: params.get('balance') || '',
+    launch: params.get('launch') || '',
   }
 }
 
 function isAuthDataValid(data) {
-  return data.token && data.phoneNumber && data.username && data.balance
+  return Boolean(data?.token && data?.launch)
 }
 
 function buildAuthStorageKey(data = {}) {
   const token = String(data.token || '').trim() || 'no-token'
-  const phoneNumber = String(data.phoneNumber || '').trim() || 'no-phone'
-  const username = String(data.username || '').trim() || 'no-username'
-  const balance = String(data.balance || '').trim() || 'no-balance'
-  return `xo_auth:${token}:${phoneNumber}:${username}:${balance}`
+  const launch = String(data.launch || '').trim() || 'no-launch'
+  return `xo_auth:${token}:${launch}`
 }
 
 function setAuthData(data) {
@@ -51,6 +47,20 @@ function getStoredAuth(data = {}) {
   } catch {
     return null
   }
+}
+
+function cleanAuthUrl() {
+  const url = new URL(window.location.href)
+  const nextParams = new URLSearchParams()
+  const token = String(window.authData?.token || '').trim()
+  const launch = String(window.authData?.launch || '').trim()
+
+  if (token) nextParams.set('token', token)
+  if (launch) nextParams.set('launch', launch)
+
+  url.search = nextParams.toString()
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`
+  window.history.replaceState({}, document.title, nextUrl)
 }
 
 function showNotAllowedScreen() {
@@ -85,7 +95,7 @@ function showUnauthorizedPopup() {
   overlay.innerHTML = `
     <div style="max-width:480px;width:100%;background:#0f172a;color:#f8fafc;padding:32px;border-radius:28px;box-shadow:0 32px 80px rgba(0,0,0,0.35);text-align:center;font-family:Inter,system-ui,sans-serif;">
       <div style="font-size:2rem;font-weight:800;margin-bottom:16px;">Unauthorized</div>
-      <p style="margin:0 0 24px;color:#cbd5e1;line-height:1.6;">This app requires a valid token, username, phone number, and balance to continue. Please authenticate or open the app with valid credentials.</p>
+      <p style="margin:0 0 24px;color:#cbd5e1;line-height:1.6;">This app requires a valid token and launch value to continue. Please authenticate or open the app with valid credentials.</p>
       <button id="unauthRetryBtn" style="padding:12px 20px;border-radius:14px;background:#2563eb;color:#fff;border:none;font-size:1rem;cursor:pointer;">Retry</button>
     </div>
   `
@@ -104,6 +114,7 @@ function showUnauthorizedPopup() {
 
 function authSuccess(data) {
   setAuthData(data)
+  cleanAuthUrl()
   showAppScreen()
 
   function callAppReady() {
@@ -121,46 +132,43 @@ function authSuccess(data) {
   callAppReady()
 }
 
-async function resolveAuthFromBackend(data) {
-  if (!data.token || !data.phoneNumber) {
+async function fetchPlayerBalance(token, launch) {
+  if (!token || !launch) {
     return null
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/tokens/resolve`, {
+    const response = await fetch(`${API_URL}/api/xo/player-balance`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: data.token, phoneNumber: data.phoneNumber }),
+      body: JSON.stringify({ token, launch }),
+      signal: typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(25000) : undefined,
     })
 
     const payload = await response.json().catch(() => ({}))
     if (!response.ok) {
-      throw new Error(payload.error || 'Could not resolve auth')
+      throw new Error(payload.error || 'Could not fetch player balance')
     }
 
+    const userData = payload?.data || {}
     return {
-      token: data.token,
-      phoneNumber: data.phoneNumber,
-      username: payload.username || data.username || '',
-      balance: payload.balance ?? data.balance ?? '',
+      token,
+      launch,
+      username: userData.username || '',
+      balance: userData.balance ?? '',
     }
   } catch (error) {
-    console.error('Auth resolution failed', error)
+    console.error('Player balance fetch failed', error)
     return null
   }
 }
 
 async function initAuth() {
   const queryData = parseAuthQuery()
-  if (isAuthDataValid(queryData)) {
-    authSuccess(queryData)
-    return
-  }
 
-  const needsResolution = Boolean(queryData.token && queryData.phoneNumber && (!queryData.username || !queryData.balance))
-  if (needsResolution) {
-    const resolved = await resolveAuthFromBackend(queryData)
-    if (resolved && isAuthDataValid(resolved)) {
+  if (isAuthDataValid(queryData)) {
+    const resolved = await fetchPlayerBalance(queryData.token, queryData.launch)
+    if (resolved) {
       authSuccess(resolved)
       return
     }
